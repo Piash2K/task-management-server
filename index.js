@@ -33,6 +33,12 @@ async function run() {
             const result = await taskCollection.insertOne(task);
             res.send(result);
         });
+        app.get('/tasks/:email', async (req, res) => {
+            const email = req.params.email;
+            const query = { userEmail: email };
+            const result = await taskCollection.find(query).toArray();
+            res.send(result);
+        });
 
 
         // Send a ping to confirm a successful connection
