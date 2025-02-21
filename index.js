@@ -45,6 +45,21 @@ async function run() {
             const result = await taskCollection.deleteOne(query);
             res.send(result);
         });
+        app.patch('/tasks/:id', async (req, res) => {
+            const id = req.params.id;
+            const updatedTask = req.body;
+            const filter = { _id: new ObjectId(id) };
+            const updateDoc = {
+                $set: {
+                    title: updatedTask.title,
+                    description: updatedTask.description,
+                    category: updatedTask.category,
+                    order: updatedTask.order
+                }
+            };
+            const result = await taskCollection.updateOne(filter, updateDoc);
+            res.send(result);
+        });
 
 
         // Send a ping to confirm a successful connection
