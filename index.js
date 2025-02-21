@@ -60,6 +60,29 @@ async function run() {
             const result = await taskCollection.updateOne(filter, updateDoc);
             res.send(result);
         });
+        app.patch('/tasks/category/:id', async (req, res) => {
+            const id = req.params.id;
+            const { category } = req.body;
+            const filter = { _id: new ObjectId(id) };
+            const updateDoc = {
+                $set: {
+                    category: category
+                }
+            };
+            const result = await taskCollection.updateOne(filter, updateDoc);
+            res.send(result);
+        });
+        app.patch('/tasks/reorder', async (req, res) => {
+            const { tasks } = req.body;
+            const bulkOps = tasks.map(task => ({
+                updateOne: {
+                    filter: { _id: new ObjectId(task._id) },
+                    update: { $set: { order: task.order } }
+                }
+            }));
+            const result = await taskCollection.bulkWrite(bulkOps);
+            res.send(result);
+        });
 
 
         // Send a ping to confirm a successful connection
