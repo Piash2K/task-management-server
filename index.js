@@ -16,7 +16,6 @@ const io = new Server(server, {
 
 const port = process.env.PORT || 5000;
 
-// Middleware
 app.use(cors());
 app.use(express.json());
 
@@ -44,10 +43,21 @@ async function run() {
             });
         });
 
+        const changeStream = taskCollection.watch();
+        changeStream.on("change", async (change) => {
+            if (change.operationType === "insert") {
+                io.emit("taskAdded", change.fullDocument);
+            } else if (change.operationType === "delete") {
+                io.emit("taskDeleted", change.documentKey._id);
+            } else if (change.operationType === "update") {
+                const updatedDoc = await taskCollection.findOne({ _id: change.documentKey._id });
+                io.emit("taskUpdated", updatedDoc);
+            }
+        });
+
         app.post('/tasks', async (req, res) => {
             const task = req.body;
             const result = await taskCollection.insertOne(task);
-            io.emit("taskAdded", task);
             res.send(result);
         });
 
@@ -62,7 +72,6 @@ async function run() {
             const id = req.params.id;
             const query = { _id: new ObjectId(id) };
             const result = await taskCollection.deleteOne(query);
-            io.emit("taskDeleted", id);
             res.send(result);
         });
 
@@ -79,7 +88,6 @@ async function run() {
                 }
             };
             const result = await taskCollection.updateOne(filter, updateDoc);
-            io.emit("taskUpdated", { _id: id, ...updatedTask });
             res.send(result);
         });
 
@@ -91,7 +99,6 @@ async function run() {
                 $set: { category: category }
             };
             const result = await taskCollection.updateOne(filter, updateDoc);
-            io.emit("taskCategoryUpdated", { _id: id, category });
             res.send(result);
         });
 
@@ -104,15 +111,12 @@ async function run() {
                 }
             }));
             const result = await taskCollection.bulkWrite(bulkOps);
-            io.emit("tasksReordered", tasks);
             res.send(result);
         });
 
         app.post('/users', async (req, res) => {
             const { uid, email, displayName, createdAt, lastLogin } = req.body;
-
             const existingUser = await usersCollection.findOne({ email });
-
             if (existingUser) {
                 const result = await usersCollection.updateOne(
                     { email },
@@ -129,7 +133,6 @@ async function run() {
         await client.db("admin").command({ ping: 1 });
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
     } finally {
-        // await client.close();
     }
 }
 run().catch(console.dir);
