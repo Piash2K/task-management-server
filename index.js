@@ -26,6 +26,7 @@ async function run() {
         await client.connect();
 
         const taskCollection = client.db('taskManagementDB').collection('tasks');
+        const usersCollection = client.db('taskManagementDB').collection('users');
 
 
         app.post('/tasks', async (req, res) => {
@@ -36,7 +37,7 @@ async function run() {
         app.get('/tasks/:email', async (req, res) => {
             const email = req.params.email;
             const query = { userEmail: email };
-            const result = await taskCollection.find(query).toArray();
+            const result = await taskCollection.find(query).sort({ order: 1 }).toArray();
             res.send(result);
         });
         app.delete('/tasks/:id', async (req, res) => {
@@ -83,7 +84,23 @@ async function run() {
             const result = await taskCollection.bulkWrite(bulkOps);
             res.send(result);
         });
+        app.post('/users', async (req, res) => {
+            const { uid, email, displayName, createdAt, lastLogin } = req.body;
 
+            const existingUser = await usersCollection.findOne({ email });
+
+            if (existingUser) {
+                const result = await usersCollection.updateOne(
+                    { email },
+                    { $set: { lastLogin } }
+                );
+                res.send(result);
+            } else {
+                const newUser = { uid, email, displayName, createdAt, lastLogin };
+                const result = await usersCollection.insertOne(newUser);
+                res.send(result);
+            }
+        });
 
         // Send a ping to confirm a successful connection
         await client.db("admin").command({ ping: 1 });
